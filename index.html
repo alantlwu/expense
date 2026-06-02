@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="開支計算">
+<title>開支計算機</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC", sans-serif;
+    background: #f2f2f7;
+    color: #1c1c1e;
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+  .header {
+    background: #fff;
+    border-bottom: 0.5px solid rgba(0,0,0,0.12);
+    padding: 16px 16px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header h1 { font-size: 20px; font-weight: 600; }
+  .header .subtitle { font-size: 13px; color: #8e8e93; margin-top: 2px; }
+  .container { padding: 16px; max-width: 480px; margin: 0 auto; }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #8e8e93;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 12px;
+  }
+  textarea {
+    width: 100%;
+    height: 130px;
+    font-family: "SF Mono", "Fira Mono", monospace;
+    font-size: 13px;
+    background: #f2f2f7;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #1c1c1e;
+    resize: vertical;
+    outline: none;
+    -webkit-appearance: none;
+  }
+  textarea:focus { background: #e9e9ef; }
+  .btn-row { display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+  .btn {
+    padding: 9px 16px;
+    border-radius: 8px;
+    border: none;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    -webkit-appearance: none;
+    transition: opacity 0.1s;
+  }
+  .btn:active { opacity: 0.7; }
+  .btn-blue { background: #007aff; color: #fff; }
+  .btn-gray { background: #e5e5ea; color: #1c1c1e; }
+  .btn-red { background: #ff3b30; color: #fff; }
+  .btn-sm { padding: 7px 13px; font-size: 14px; }
+  .parse-note { font-size: 12px; color: #8e8e93; }
+  .items-list { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .item-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: #f2f2f7;
+    border-radius: 8px;
+    font-size: 15px;
+  }
+  .item-amt { font-weight: 600; min-width: 68px; color: #1c1c1e; }
+  .item-lbl { flex: 1; color: #636366; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item-del {
+    background: none; border: none; color: #c7c7cc;
+    font-size: 20px; padding: 0 4px; cursor: pointer; line-height: 1;
+  }
+  .item-del:active { color: #ff3b30; }
+  .add-row { display: flex; gap: 8px; margin-top: 10px; }
+  .add-row input {
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: none;
+    background: #f2f2f7;
+    color: #1c1c1e;
+    font-size: 15px;
+    font-family: inherit;
+    -webkit-appearance: none;
+    outline: none;
+  }
+  .add-row input:focus { background: #e9e9ef; }
+  .empty-hint { font-size: 14px; color: #c7c7cc; text-align: center; padding: 20px 0; }
+  .total-big { font-size: 36px; font-weight: 700; color: #1c1c1e; letter-spacing: -1px; }
+  .total-label { font-size: 13px; color: #8e8e93; margin-bottom: 4px; }
+  .total-count { font-size: 14px; color: #8e8e93; margin-top: 6px; }
+  .divider { height: 0.5px; background: #e5e5ea; margin: 14px 0; }
+  .deduct-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .deduct-row input {
+    width: 120px; padding: 9px 12px;
+    border-radius: 8px; border: none;
+    background: #f2f2f7; color: #1c1c1e;
+    font-size: 15px; font-family: inherit;
+    -webkit-appearance: none; outline: none;
+  }
+  .deduct-row input:focus { background: #e9e9ef; }
+  .deduct-result {
+    display: none; margin-top: 10px; padding: 12px 14px;
+    background: #f2f2f7; border-radius: 8px;
+    font-size: 14px; color: #636366;
+  }
+  .deduct-result .after-amt { font-size: 24px; font-weight: 700; color: #1c1c1e; }
+  .verify-btn-row { margin-top: 12px; }
+  .verify-panel { display: none; margin-top: 12px; }
+  .verify-steps {
+    font-family: "SF Mono", "Fira Mono", monospace;
+    font-size: 12px; color: #636366;
+    background: #f2f2f7; border-radius: 8px;
+    padding: 10px 12px; max-height: 200px;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+  }
+  .step-line {
+    display: flex; justify-content: space-between; gap: 8px;
+    border-bottom: 0.5px solid #e5e5ea; padding: 4px 0;
+  }
+  .step-line:last-child { border-bottom: none; font-weight: 700; font-size: 13px; color: #1c1c1e; }
+  .verify-ok {
+    margin-top: 8px; padding: 9px 12px; border-radius: 8px;
+    background: #d1f2e0; color: #1a7a47; font-size: 13px; font-weight: 600;
+  }
+  .verify-fail {
+    margin-top: 8px; padding: 9px 12px; border-radius: 8px;
+    background: #ffd6d4; color: #c0392b; font-size: 13px; font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>開支計算機</h1>
+  <div class="subtitle">貼入清單，自動提取數字加總</div>
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <div class="card-title">貼入清單</div>
+    <textarea id="listInput" placeholder="貼入清單，例如：
+245垃圾袋
+744吃飯
+3360 netflix
+286水費"></textarea>
+    <div class="btn-row">
+      <button class="btn btn-blue" id="parseBtn">解析並加入</button>
+      <button class="btn btn-gray btn-sm" id="clearInputBtn">清除</button>
+      <span class="parse-note" id="parseResult"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">項目清單</div>
+    <div class="items-list" id="itemsList">
+      <div class="empty-hint" id="emptyHint">尚無項目</div>
+    </div>
+    <div class="add-row">
+      <input type="number" id="addAmt" placeholder="金額" min="1" style="width:100px">
+      <input type="text" id="addLabel" placeholder="項目名稱（可選）" style="flex:1">
+      <button class="btn btn-blue btn-sm" id="addBtn">新增</button>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px">
+      <button class="btn btn-red btn-sm" id="clearAllBtn">清空全部</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">加總結果</div>
+    <div class="total-label">總金額</div>
+    <div class="total-big" id="grandTotal">$0</div>
+    <div class="total-count" id="itemCount">0 項</div>
+
+    <div class="verify-btn-row">
+      <button class="btn btn-gray btn-sm" id="verifyBtn" style="width:100%">顯示驗算明細</button>
+    </div>
+    <div class="verify-panel" id="verifyPanel">
+      <div class="verify-steps" id="verifySteps"></div>
+      <div id="verifyMatch"></div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="card-title" style="margin-bottom:10px">扣除計算</div>
+    <div class="deduct-row">
+      <span style="font-size:15px;color:#636366">扣除</span>
+      <input type="number" id="deductAmt" placeholder="輸入金額" min="0">
+      <span style="font-size:15px;color:#636366">後剩餘</span>
+    </div>
+    <div class="deduct-result" id="deductResult">
+      剩餘金額：<br>
+      <span class="after-amt" id="afterDeduct"></span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var items = [];
+var verifyOpen = false;
+
+function fmt(n) { return '$' + Math.round(n).toLocaleString(); }
+
+function getTotal() {
+  var s = 0;
+  for (var i = 0; i < items.length; i++) s += items[i].amt;
+  return s;
+}
+
+function calcDeduct() {
+  var el = document.getElementById('deductAmt');
+  var res = document.getElementById('deductResult');
+  var d = parseFloat(el.value);
+  if (!isNaN(d) && d > 0) {
+    var after = getTotal() - d;
+    var span = document.getElementById('afterDeduct');
+    span.textContent = fmt(after);
+    span.style.color = after < 0 ? '#ff3b30' : '#1c1c1e';
+    res.style.display = 'block';
+  } else {
+    res.style.display = 'none';
+  }
+}
+
+function renderVerify() {
+  var panel = document.getElementById('verifyPanel');
+  if (!verifyOpen || items.length === 0) { panel.style.display = 'none'; return; }
+  var acc = 0;
+  var html = '';
+  for (var i = 0; i < items.length; i++) {
+    acc += items[i].amt;
+    html += '<div class="step-line"><span>' + (i+1) + '. ' + (items[i].label||'—') + ' (+' + Math.round(items[i].amt).toLocaleString() + ')</span><span>= ' + Math.round(acc).toLocaleString() + '</span></div>';
+  }
+  html += '<div class="step-line"><span>合計</span><span>' + fmt(acc) + '</span></div>';
+  document.getElementById('verifySteps').innerHTML = html;
+  var main = getTotal();
+  var match = document.getElementById('verifyMatch');
+  if (Math.round(acc) === Math.round(main)) {
+    match.className = 'verify-ok';
+    match.textContent = '✓ 驗算一致，總計 ' + fmt(main);
+  } else {
+    match.className = 'verify-fail';
+    match.textContent = '⚠ 結果不一致！主計算：' + fmt(main) + '，驗算：' + fmt(acc);
+  }
+  panel.style.display = 'block';
+}
+
+function render() {
+  var list = document.getElementById('itemsList');
+  var hint = document.getElementById('emptyHint');
+  if (items.length === 0) {
+    list.innerHTML = '';
+    list.appendChild(hint);
+  } else {
+    var html = '';
+    for (var i = 0; i < items.length; i++) {
+      html += '<div class="item-row">' +
+        '<span class="item-amt">' + fmt(items[i].amt) + '</span>' +
+        '<span class="item-lbl">' + (items[i].label || '—') + '</span>' +
+        '<button class="item-del" data-i="' + i + '">✕</button>' +
+        '</div>';
+    }
+    list.innerHTML = html;
+    var dels = list.querySelectorAll('.item-del');
+    for (var j = 0; j < dels.length; j++) {
+      dels[j].addEventListener('click', function() {
+        items.splice(parseInt(this.getAttribute('data-i')), 1);
+        render();
+      });
+    }
+  }
+  document.getElementById('grandTotal').textContent = fmt(getTotal());
+  document.getElementById('itemCount').textContent = items.length + ' 項';
+  calcDeduct();
+  renderVerify();
+}
+
+document.getElementById('parseBtn').addEventListener('click', function() {
+  var raw = document.getElementById('listInput').value.trim();
+  if (!raw) return;
+  var lines = raw.split('\n');
+  var added = 0;
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) continue;
+    var amt, label;
+    var m1 = line.match(/^(\d+(?:\.\d+)?)\s*(.*)/);
+    var m2 = line.match(/^(.*?)\s*(\d+(?:\.\d+)?)\s*$/);
+    if (m1) { amt = parseFloat(m1[1]); label = m1[2].trim(); }
+    else if (m2) { amt = parseFloat(m2[2]); label = m2[1].trim(); }
+    else continue;
+    if (!isNaN(amt) && amt > 0) { items.push({ amt: amt, label: label || '' }); added++; }
+  }
+  document.getElementById('parseResult').textContent = added > 0 ? '已加入 ' + added + ' 筆' : '未找到數字';
+  render();
+});
+
+document.getElementById('clearInputBtn').addEventListener('click', function() {
+  document.getElementById('listInput').value = '';
+  document.getElementById('parseResult').textContent = '';
+});
+
+document.getElementById('addBtn').addEventListener('click', function() {
+  var amtEl = document.getElementById('addAmt');
+  var labelEl = document.getElementById('addLabel');
+  var amt = parseFloat(amtEl.value.trim());
+  if (isNaN(amt) || amt <= 0) { amtEl.focus(); return; }
+  items.push({ amt: amt, label: labelEl.value.trim() || '自訂項目' });
+  amtEl.value = ''; labelEl.value = '';
+  amtEl.focus();
+  render();
+});
+
+document.getElementById('clearAllBtn').addEventListener('click', function() {
+  if (items.length === 0) return;
+  if (!confirm('確定清空全部項目？')) return;
+  items = [];
+  render();
+});
+
+document.getElementById('verifyBtn').addEventListener('click', function() {
+  verifyOpen = !verifyOpen;
+  this.textContent = verifyOpen ? '隱藏驗算明細' : '顯示驗算明細';
+  renderVerify();
+});
+
+document.getElementById('deductAmt').addEventListener('input', calcDeduct);
+document.getElementById('addAmt').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('addBtn').click(); });
+document.getElementById('addLabel').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('addBtn').click(); });
+
+render();
+</script>
+</body>
+</html>
